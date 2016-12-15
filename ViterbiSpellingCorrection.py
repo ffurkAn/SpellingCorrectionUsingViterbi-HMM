@@ -4,6 +4,7 @@ import numpy as np
 
 # CONSTANTS
 numberOfTrainLetter = 20000
+numberOfWords = 0
 
 # her harf sayacı 1 ile ilkleniyor. daha sonra 1 çıkartılarak initialize edilecek
 alphabet = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u',
@@ -18,43 +19,53 @@ alphabetEnum = {
 	'o': 14, 'p': 15, 'q': 16, 'r': 17, 's': 18, 't': 19, 'u': 20, 'v': 21, 'w': 22, 'x': 23, 'y': 24, 'z': 25
 	}
 
-firstStateLetterPossibilities = []  # FIRST STATE VECTOR
+probabilityOfWordStartsWithLetter = []  # FIRST STATE VECTOR
 
-# harflerden sonra gelen harflerin sayıları tutulucak.daha sonra oranların tutulacağı matrix oluşturulacak
-# son kolon da o harten sonra gelen harflerin toplamları yer alıcak ki %delik dilimi kolay hesaplayabilelim
-countOfStateTransitionMatrix = np.zeros(shape=(26, 27))
-stateTransitionMatrix = np.zeros(shape=(26, 26))
+# A[x][y] : (Transtion Probability Matrix) Durum Geçiş Olasılık Matrisi: Eğitim setinde bir kelimede x harfinden sonra y harfi gelme olasılığı
+countOfTransitionProbabilityMatrix = np.zeros(shape=(26, 27))
+transitionProbabilityMatrix = np.zeros(shape=(26, 26))
 
-f = open('docs.data')
+# B[x][o] : (Emission Probability Matrix) Çıkış Olasılık Matrisi: Eğitim setinde x harfi olması gerekirken o harfinin görülme olasılığı.
+countOfEmissionTransitionMatrix = np.zeros(shape=(26, 27))
+emissionTransitionMatrix = np.zeros(shape=(26, 26))
 
+
+################################################################### FUNCTIONS DEFINITIONS #############################################################################
 
 # hangi harften sonra hangi harf deliyor sayısını tutmak için
 def incrementCountOfStateTransitionMatrix( previousLetter, currentLetter ):
 	previousLetterIndex = alphabetEnum[previousLetter]
 	currentLetterIndex = alphabetEnum[currentLetter]
-	countOfStateTransitionMatrix[previousLetterIndex, currentLetterIndex] += 1
-	countOfStateTransitionMatrix[previousLetterIndex, 26] += 1  # totalı arttır
+	countOfTransitionProbabilityMatrix[previousLetterIndex, currentLetterIndex] += 1
+	countOfTransitionProbabilityMatrix[previousLetterIndex, 26] += 1  # totalı arttır
 	return
 
 # ilk durum harf olasılıklarının çıkartılması
 def createFirstStateLetterPossibilitiesVector( ):
 	for letterIndex in range(0, 26):
-		numberOfLetterInTrainSet = letterCounts[
-			                           alphabet[letterIndex]] - 1  # her harf 1 ile ilklendiği için 1 çıkarıyoruz
-		firstStateLetterPossibilities.append((100 * numberOfLetterInTrainSet) / (numberOfTrainLetter))
+		# her harf 1 ile ilklendiği için 1 çıkarıyoruz
+		numberOfLetterInTrainSet = letterCounts[alphabet[letterIndex]] - 1
+		probabilityOfWordStartsWithLetter.append((100 * numberOfLetterInTrainSet) / (numberOfWords))
 	return
 
 
 # transition matrix olasılıklarının çıkarılması
 def createStateTransitionMatrix( ):
 	for row in range(0, 26):
-		total = countOfStateTransitionMatrix[row][26]
-		for column in range(0, 26):
-			count = countOfStateTransitionMatrix[row][column]
-			possibility = (100 * count) / total
-			stateTransitionMatrix[row][column] = possibility
+		total = countOfTransitionProbabilityMatrix[row][26]
+		if (total == 0):
+			continue
+		else:
+			for column in range(0, 26):
+				count = countOfTransitionProbabilityMatrix[row][column]
+				probability = (100 * count) / total
+				transitionProbabilityMatrix[row][column] = probability
 	return
 
+
+######################################################################## BEGINNING OF PROGRAM ###################################################################
+
+f = open('docstest.data')
 
 # dosyadaki egitimdeki harflerin sayıları ve transition matrix sayıları hesaplanır
 trainCounter = 0
@@ -64,12 +75,17 @@ for line in f.readlines():
 		break
 
 	currentLetter = line.split()[0]
-	if (currentLetter == ' ') or (currentLetter == "_"):
-		continue
+	if (currentLetter == "_"):
+		previousLetter = currentLetter
 	else:
+		# dosyanın ilk karakteri ya da önceki karakter underscore ise yeni kelime sayısını 1 arttır
+		if (previousLetter == "_") or (trainCounter == 0):
+			numberOfWords += 1
+
 		letterCounts[currentLetter] += 1
 		trainCounter += 1
-		if (trainCounter > 1):
+		# ilk karakter ve önceki karakter underscore ise matrix update edilmez
+		if (trainCounter > 1) and (previousLetter != "_"):
 			incrementCountOfStateTransitionMatrix(previousLetter, currentLetter)
 		previousLetter = currentLetter
 
