@@ -42,41 +42,30 @@ def createFirstStateLetterPossibilitiesVector( ):
 	return
 
 
-# hangi harften sonra hangi harf deliyor sayısını tutmak için
-def incrementCountOfTransitionProbabilityMatrix( previousLetter, currentLetter ):
-	previousLetterIndex = alphabetEnum[previousLetter]
-	currentLetterIndex = alphabetEnum[currentLetter]
-	countOfTransitionProbabilityMatrix[previousLetterIndex, currentLetterIndex] += 1
-	countOfTransitionProbabilityMatrix[previousLetterIndex, 26] += 1  # totalı arttır
-	return
-
-
-# transition probability matrix olasılıklarının çıkarılması
-def createStateTransitionMatrix( ):
+# emission ve transition matrix için olasılık matrisi
+def createProbabilityMatrixOfCountMatrix( countMatrix, probMatrix ):
 	for row in range(0, 26):
-		total = countOfTransitionProbabilityMatrix[row][26]
+		total = countMatrix[row][26]
 		if (total == 0):
 			continue
 		else:
 			for column in range(0, 26):
-				count = countOfTransitionProbabilityMatrix[row][column]
+				count = countMatrix[row][column]
 				probability = (100 * count) / total
-				transitionProbabilityMatrix[row][column] = probability
+				probMatrix[row][column] = probability
 	return
 
 
-# emission sayılarını belirlicez
-def incrementCountOfEmissionProbabilityMatrix( mustBe, observed ):
-	mustBeLetterIndex = alphabetEnum[mustBe]
-	observerdLetterIndex = alphabetEnum[observed]
-	countOfEmissionProbabilityMatrix[mustBeLetterIndex, observerdLetterIndex] += 1
-	countOfTransitionProbabilityMatrix[mustBeLetterIndex, 26] += 1
+# emission ve transition matrixlerin adetlerini tutuyor
+# transition matrix için x: previous, y: current letter temsil eder
+# emission matrix için x: olması gereken harf, y ise gözlenen yanlış harfi temsil eder
+def incrementCountOfMatrixByTarget( x, y, targetCountMatrix ):
+	xIndex = alphabetEnum[x]
+	yIndex = alphabetEnum[y]
+	targetCountMatrix[xIndex, yIndex] += 1
+	targetCountMatrix[xIndex, 26] += 1
 	return
 
-
-# create emission probability matrix
-def createEmissionProbabilityMatrix( ):
-	return
 ######################################################################## BEGINNING OF PROGRAM ###################################################################
 
 f = open('docstest.data')
@@ -102,10 +91,10 @@ for line in f.readlines():
 		trainCounter += 1
 		# ilk karakter ve önceki karakter underscore ise matrix update edilmez
 		if (trainCounter > 1) and (previousLetter != "_"):
-			incrementCountOfTransitionProbabilityMatrix(previousLetter, currentLetter)
+			incrementCountOfMatrixByTarget(previousLetter, currentLetter, countOfTransitionProbabilityMatrix)
 			# eğer soldaki ile sağdaki aynı karakter değilse emission matrixi update et
 			if (currentLetter != wrongLetter):
-				increment
+				incrementCountOfMatrixByTarget(currentLetter, wrongLetter, countOfEmissionProbabilityMatrix)
 
 
 		previousLetter = currentLetter
@@ -114,6 +103,11 @@ for line in f.readlines():
 createFirstStateLetterPossibilitiesVector()
 
 # transition matrix olasılıklarının çıkarılması
-createStateTransitionMatrix()
+# createStateTransitionMatrix()
+createProbabilityMatrixOfCountMatrix(countOfTransitionProbabilityMatrix, transitionProbabilityMatrix)
+
+# emission matrix olasılıklarının çıkarılması
+# createEmissionProbabilityMatrix()
+createProbabilityMatrixOfCountMatrix(countOfEmissionProbabilityMatrix, emissionProbabilityMatrix)
 
 f.close()
