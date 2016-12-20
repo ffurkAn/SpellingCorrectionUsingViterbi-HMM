@@ -1,10 +1,15 @@
+import csv
 from collections import Counter
 
 import numpy as np
 
+# kabul
+# 20000 karakter okuduktan sonra  okunmaya başlanan ilk kelime parçaso
+
 # CONSTANTS
-numberOfTrainLetter = 20000
+numberOfTestCharacter = 20000
 numberOfWords = 0
+delimiterConstant = ' '
 
 # her harf sayacı 1 ile ilkleniyor. daha sonra 1 çıkartılarak initialize edilecek
 alphabet = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u',
@@ -53,7 +58,7 @@ def createProbabilityMatrixOfCountMatrix( countMatrix, probMatrix ):
 				count = countMatrix[row][column]
 				probability = (100 * count) / total
 				probMatrix[row][column] = probability
-	return
+	return probMatrix
 
 
 # emission ve transition matrixlerin adetlerini tutuyor
@@ -64,50 +69,89 @@ def incrementCountOfMatrixByTarget( x, y, targetCountMatrix ):
 	yIndex = alphabetEnum[y]
 	targetCountMatrix[xIndex, yIndex] += 1
 	targetCountMatrix[xIndex, 26] += 1
+	return targetCountMatrix
+
+
+# viterbi algorithm
+def runViterbi( testWord, probabilityOfWordStartsWithLetter, transitionProbabilityMatrix, emissionProbabilityMatrix):
+
+
+
 	return
 
 ######################################################################## BEGINNING OF PROGRAM ###################################################################
 
-f = open('docstest.data')
+# reads file as numberOfline X 2 matrix
+f = open('docs.data')
+reader = csv.reader(f, delimiter=delimiterConstant)
+
+# create test and train matrix
+testMatrix = np.empty(shape=(numberOfTestCharacter, 2), dtype=np.str)
+numberOfTrainCharachter = 0
 
 # dosyadaki egitimdeki harflerin sayıları ve transition matrix sayıları hesaplanır
-trainCounter = 0
+testCharacterCounter = 0
 previousLetter = ""
-for line in f.readlines():
-	if (trainCounter > numberOfTrainLetter):
-		break
 
-	currentLetter = line.split()[0]
-	wrongLetter = line.split()[1]
+for row in reader:
+	# test section
+	if (testCharacterCounter < numberOfTestCharacter):
+		testMatrix[testCharacterCounter] = row
+		if (row[0] != "_"):
+			testCharacterCounter +=1
 
-	if (currentLetter == "_"):
-		previousLetter = currentLetter
+	# train section
 	else:
-		# dosyanın ilk karakteri ya da önceki karakter underscore ise yeni kelime sayısını 1 arttır
-		if (previousLetter == "_") or (trainCounter == 0):
-			numberOfWords += 1
+		leftSideLetter = row[0]  # true
+		rightSideLetter = row[1]  # false
 
-		letterCounts[currentLetter] += 1
-		trainCounter += 1
-		# ilk karakter ve önceki karakter underscore ise matrix update edilmez
-		if (trainCounter > 1) and (previousLetter != "_"):
-			incrementCountOfMatrixByTarget(previousLetter, currentLetter, countOfTransitionProbabilityMatrix)
-			# eğer soldaki ile sağdaki aynı karakter değilse emission matrixi update et
-			if (currentLetter != wrongLetter):
-				incrementCountOfMatrixByTarget(currentLetter, wrongLetter, countOfEmissionProbabilityMatrix)
+		# ilk egitim datasında önceki harf yok sonraki harften devam et
+		if (previousLetter == ""):
+			previousLetter = leftSideLetter
+			continue
 
+		if (leftSideLetter == "_"):
+			previousLetter = leftSideLetter
+		else:
+			# dosyanın ilk karakteri ya da önceki karakter underscore ise yeni kelime sayısını 1 arttır
+			if (previousLetter == "_"):
+				numberOfWords += 1
+				letterCounts[leftSideLetter] += 1
 
-		previousLetter = currentLetter
+			# ilk karakter ve önceki karakter underscore ise matrix update edilmez
+			if (previousLetter != "_"):
+				countOfTransitionProbabilityMatrix = incrementCountOfMatrixByTarget(previousLetter, leftSideLetter,
+				                                                                    countOfTransitionProbabilityMatrix)
+				# eğer soldaki ile sağdaki aynı karakter değilse emission matrixi update et
+				if (leftSideLetter != rightSideLetter):
+					incrementCountOfMatrixByTarget(leftSideLetter, rightSideLetter, countOfEmissionProbabilityMatrix)
+
+			previousLetter = leftSideLetter
+
 
 # ilk durum harf olasılıklarının çıkartılması
 createFirstStateLetterPossibilitiesVector()
 
 # transition matrix olasılıklarının çıkarılması
 # createStateTransitionMatrix()
-createProbabilityMatrixOfCountMatrix(countOfTransitionProbabilityMatrix, transitionProbabilityMatrix)
+transitionProbabilityMatrix = createProbabilityMatrixOfCountMatrix(countOfTransitionProbabilityMatrix,
+                                                                   transitionProbabilityMatrix)
 
 # emission matrix olasılıklarının çıkarılması
 # createEmissionProbabilityMatrix()
-createProbabilityMatrixOfCountMatrix(countOfEmissionProbabilityMatrix, emissionProbabilityMatrix)
+emissionProbabilityMatrix = createProbabilityMatrixOfCountMatrix(countOfEmissionProbabilityMatrix,
+                                                                 emissionProbabilityMatrix)
 
-f.close()
+testWord = ""
+trueWord = ""
+numberOfTrueCorrection = 0
+numberOfFalseCorrection = 0
+
+for row in testMatrix:
+	# use the right side of doc
+	if (row[1] == "_"):
+		expectedWord = runViterbi(testWord, probabilityOfWordStartsWithLetter, transitionProbabilityMatrix,
+		                          emissionProbabilityMatrix)
+		testWord = ""
+	else:
+		testWord += row[1]
