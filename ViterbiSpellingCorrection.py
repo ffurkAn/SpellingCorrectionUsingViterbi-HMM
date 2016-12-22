@@ -78,27 +78,23 @@ def incrementCountOfEmissionProbabilityMatrix( mustBe, observed ):
 
 
 # viterbi algorithm
-def runViterbi( testWord, probabilityOfWordStartsWithLetter, transitionProbabilityMatrix, emissionProbabilityMatrix):
-	sigmaMatrix = np.zeros([testWord.__len__(), alphabet.__len__()])
+def runViterbi( testWord, startProb, transition, emission ):
+	sigmaMatrix = np.zeros(shape=(len(testWord), len(alphabet)))
 
-	firstCharIndex = alphabetEnum[testWord[0]]
-	# first iteration for the first char of observed word
-	for charIndex in range(0, alphabet.__len__()):
-		sigmaMatrix[0, charIndex] = probabilityOfWordStartsWithLetter[charIndex] * \
-		                            emissionProbabilityMatrix[firstCharIndex][charIndex]
+	# test kelimesinin ilk harfi için ilk durum olasılıkları hesaplanıyor
+	for charIndex in range(0, len(alphabet)):
+		sigmaMatrix[0][charIndex] = startProb[charIndex] * emission[charIndex][alphabetEnum[testWord[0]]]
 
-	# second iteration fot the rest of the word
-	for restOfWordCharIndex in range(1, testWord.__len__()):  # testWord geri kalan tüm harfleri değerlendiriyoruz
-		for x in range(0, alphabet.__len__()):  # tüm hidden stateler için ...
+	# test kelimesinin geri kalan harfleri için
+	for i in range(1, len(testWord)):
+		for state in range(0, len(alphabet)):
 			maxProb = 0
-			for y in range(0, alphabet.__len__()):  # ... diğer hidden stateler değerlendiriliyor
-				#      önceki durumda x olma olasılığı       * önceki gün x iken sonraki gün y olma olasılığı
-				tmp = sigmaMatrix[restOfWordCharIndex - 1][y] * transitionProbabilityMatrix[y][x]
-				if (tmp > maxProb):
-					maxProb = tmp
-
-			sigmaMatrix[restOfWordCharIndex][x] = maxProb * emissionProbabilityMatrix[
-				alphabetEnum[testWord[restOfWordCharIndex]]][x]
+			for prevState in range(0, len(alphabet)):
+				prob = emission[alphabetEnum[testWord[i]]][state] * transition[prevState][state] * sigmaMatrix[i - 1][
+					prevState]
+				if (prob > maxProb):
+					maxProb = prob
+			sigmaMatrix[i][state] = maxProb
 
 	predictedWord = ""
 	for i in range(0, testWord.__len__()):
@@ -184,12 +180,12 @@ numberOfFalseCorrection = 0
 for row in testMatrix:
 	# use the right side of doc
 	if (row[1] == "_"):
-		# print("------------------------------")
-		#print("Test:         " + testWord)
+		print("------------------------------")
+		print("Test:         " + testWord)
 		expectedWord = runViterbi(testWord, probabilityOfWordStartsWithLetter, transitionProbabilityMatrix,
 		                          emissionProbabilityMatrix)
-		# print("Predicted:    " + expectedWord)
-		# print("Right one is: " + trueWord)
+		print("Predicted:    " + expectedWord)
+		print("Right one is: " + trueWord)
 
 		if (testWord == expectedWord):
 			numberOfTrueCorrection += 1
@@ -204,3 +200,14 @@ for row in testMatrix:
 
 accuracy = (100 * numberOfTrueCorrection) / (numberOfFalseCorrection + numberOfTrueCorrection)
 print("Accuracy: " + accuracy.__str__())
+
+a = [[0.5, 0.4, 0.1],
+     [0.4, 0.3, 0.3],
+     [0.1, 0.4, 0.5]]
+
+b = [[0.5, 0.75, 0.25],
+     [0.5, 0.25, 0.75]]
+
+pi = [0.5, 0.3, 0.2]
+
+o = "srrsr"

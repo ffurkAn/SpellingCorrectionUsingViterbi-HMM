@@ -1,35 +1,59 @@
-################################################################### FUNCTIONS DEFINITIONS #############################################################################
+import numpy as np
+
+alphabet = ['h', 'm', 'l']
+alphabetEnum = {'h': 0, 'm': 1, 'l': 2}
+
+states = ['s', 'r']
+statesEnum = {'s': 0, 'r': 1}
 
 
-# ilk durum harf olasılıklarının çıkartılması
-def createFirstStateLetterPossibilitiesVector( ):
-	for letterIndex in range(0, 26):
-		# her harf 1 ile ilklendiği için 1 çıkarıyoruz
-		numberOfLetterInTrainSet = letterCounts[alphabet[letterIndex]] - 1
-		probabilityOfWordStartsWithLetter.append((100 * numberOfLetterInTrainSet) / (numberOfWords))
-	return
+# viterbi algorithm
+def runViterbi( testWord, startProb, transition, emission ):
+	sigmaMatrix = np.zeros(shape=(len(testWord), len(alphabet)))
+
+	# test kelimesinin ilk harfi için ilk durum olasılıkları hesaplanıyor
+	for charIndex in range(0, len(alphabet)):
+		sigmaMatrix[0][charIndex] = startProb[charIndex] * emission[charIndex][statesEnum[testWord[0]]]
+
+	# test kelimesinin geri kalan harfleri için
+	for i in range(1, len(testWord)):
+		for state in range(0, len(alphabet)):
+			maxProb = 0
+			for prevState in range(0, len(alphabet)):
+				prob = emission[state][statesEnum[testWord[i]]] * transition[prevState][state] * sigmaMatrix[i - 1][
+					prevState]
+				if (prob > maxProb):
+					maxProb = prob
+			sigmaMatrix[i][state] = maxProb
+
+	predictedWord = ""
+	for i in range(0, testWord.__len__()):
+		predictedChar = alphabet[np.argmax(sigmaMatrix[i])]
+		predictedWord += predictedChar
+
+	return predictedWord
 
 
-# emission ve transition matrix için olasılık matrisi
-def createProbabilityMatrixOfCountMatrix( countMatrix, probMatrix ):
-	for row in range(0, 26):
-		total = countMatrix[row][26]
-		if (total == 0):
-			continue
-		else:
-			for column in range(0, 26):
-				count = countMatrix[row][column]
-				probability = (100 * count) / total
-				probMatrix[row][column] = probability
-	return
+#   H M L
+# H
+# M
+# L
+a = [[0.5, 0.4, 0.1],
+     [0.4, 0.3, 0.3],
+     [0.1, 0.4, 0.5]]
 
+#   s r
+# H
+# M
+# L
+b = [[0.75, 0.25],
+     [0.5, 0.5],
+     [0.25, 0.75]]
 
-# emission ve transition matrixlerin adetlerini tutuyor
-# transition matrix için x: previous, y: current letter temsil eder
-# emission matrix için x: olması gereken harf, y ise gözlenen yanlış harfi temsil eder
-def incrementCountOfMatrixByTarget( x, y, targetCountMatrix ):
-	xIndex = alphabetEnum[x]
-	yIndex = alphabetEnum[y]
-	targetCountMatrix[xIndex, yIndex] += 1
-	targetCountMatrix[xIndex, 26] += 1
-	return
+pi = [0.2, 0.5, 0.3]
+
+o = "srrsr"
+
+predictedHidden = runViterbi(o, pi, a, b)
+
+print(predictedHidden)
