@@ -3,33 +3,32 @@ from collections import Counter
 
 import numpy as np
 
-# kabul
-# 20000 karakter okuduktan sonra  okunmaya başlanan ilk kelime parçaso
-
-# CONSTANTS
 numberOfTestCharacter = 20000
 numberOfWords = 0
-delimiterConstant = ' '
+delimiterConstant = ' '  # whitespace
 
 # her harf sayacı 1 ile ilkleniyor. daha sonra 1 çıkartılarak initialize edilecek
 alphabet = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u',
             'v', 'w', 'x', 'y', 'z']
 
-# holds the number of letters
+# kelimelerin hangi harflerle başladıklarını tutuyor
 letterCounts = Counter(alphabet)
 
-## alphabet dictionary: enumerate etmek için kullanılacak
+## alphabet dictionary, matrix indexlemelerinde kullanılacak
 alphabetEnum = {
 	'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4, 'f': 5, 'g': 6, 'h': 7, 'i': 8, 'j': 9, 'k': 10, 'l': 11, 'm': 12, 'n': 13,
 	'o': 14, 'p': 15, 'q': 16, 'r': 17, 's': 18, 't': 19, 'u': 20, 'v': 21, 'w': 22, 'x': 23, 'y': 24, 'z': 25
 	}
 
+# kelimelerin harfler ile başlama olasılıkları
 probabilityOfWordStartsWithLetter = []  # FIRST STATE VECTOR
 
 # A[x][y] : (Transtion Probability Matrix) Durum Geçiş Olasılık Matrisi: Eğitim setinde bir kelimede x harfinden sonra y harfi gelme olasılığı
+# son kolon toplamları tutmak için, daha sonra olasılıklar hesaplanırken kullanılacak
 countOfTransitionProbabilityMatrix = np.zeros(shape=(26, 27))
 
 # B[x][o] : (Emission Probability Matrix) Çıkış Olasılık Matrisi: Eğitim setinde x harfi olması gerekirken o harfinin görülme olasılığı.
+# son kolon toplamları tutmak için, daha sonra olasılıklar hesaplanırken kullanılacak
 countOfEmissionProbabilityMatrix = np.zeros(shape=(26, 27))
 
 
@@ -69,6 +68,7 @@ def incrementCountOfTransitionProbabilityMatrix( previousLetter, currentLetter )
 	return
 
 
+# mustBe harfi olması gerekirken observed harfi geldiğinde
 def incrementCountOfEmissionProbabilityMatrix( mustBe, observed ):
 	mustBeLetterIndex = alphabetEnum[mustBe]
 	observerdLetterIndex = alphabetEnum[observed]
@@ -90,13 +90,18 @@ def runViterbi( testWord, startProb, transition, emission ):
 		for state in range(0, len(alphabet)):
 			maxProb = 0
 			for prevState in range(0, len(alphabet)):
+				# i harfi olması olduğu zaman state olma durumu * önceki harf prevState iken state olma durumu * önceki sigma değeri
 				prob = emission[alphabetEnum[testWord[i]]][state] * transition[prevState][state] * sigmaMatrix[i - 1][
 					prevState]
+
+				#update max probability
 				if (prob > maxProb):
 					maxProb = prob
+
 			sigmaMatrix[i][state] = maxProb
 
 	predictedWord = ""
+	# sigma matrixindeki her satır için maxProb alınıyor ve indexindeki harf kelimeye ekleniyor
 	for i in range(0, testWord.__len__()):
 		predictedChar = alphabet[np.argmax(sigmaMatrix[i])]
 		predictedWord += predictedChar
@@ -154,10 +159,10 @@ for row in reader:
 
 			# ilk karakter ve önceki karakter underscore ise matrix update edilmez
 			else:
+				# önceki harf -> sonraki harf
 				incrementCountOfTransitionProbabilityMatrix(previousLetter, leftSideLetter)
-				# eğer soldaki ile sağdaki aynı karakter değilse emission matrixi update et
-				if (leftSideLetter != rightSideLetter):
-					incrementCountOfEmissionProbabilityMatrix(leftSideLetter, rightSideLetter)
+				# leftSide olması gerekirken rightSide olması. matrixi update et
+				incrementCountOfEmissionProbabilityMatrix(leftSideLetter, rightSideLetter)
 
 				previousLetter = leftSideLetter
 		else:
@@ -178,16 +183,11 @@ numberOfTrueCorrection = 0
 numberOfFalseCorrection = 0
 
 for row in testMatrix:
-	# use the right side of doc
 	if (row[1] == "_"):
-		print("------------------------------")
-		print("Test:         " + testWord)
-		expectedWord = runViterbi(testWord, probabilityOfWordStartsWithLetter, transitionProbabilityMatrix,
-		                          emissionProbabilityMatrix)
-		print("Predicted:    " + expectedWord)
-		print("Right one is: " + trueWord)
+		predictedWord = runViterbi(testWord, probabilityOfWordStartsWithLetter, transitionProbabilityMatrix,
+		                           emissionProbabilityMatrix)
 
-		if (testWord == expectedWord):
+		if (trueWord == predictedWord):
 			numberOfTrueCorrection += 1
 		else:
 			numberOfFalseCorrection += 1
@@ -201,13 +201,3 @@ for row in testMatrix:
 accuracy = (100 * numberOfTrueCorrection) / (numberOfFalseCorrection + numberOfTrueCorrection)
 print("Accuracy: " + accuracy.__str__())
 
-a = [[0.5, 0.4, 0.1],
-     [0.4, 0.3, 0.3],
-     [0.1, 0.4, 0.5]]
-
-b = [[0.5, 0.75, 0.25],
-     [0.5, 0.25, 0.75]]
-
-pi = [0.5, 0.3, 0.2]
-
-o = "srrsr"
